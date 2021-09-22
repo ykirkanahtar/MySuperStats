@@ -8,9 +8,12 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Abp.Authorization;
 using Abp.Authorization.Users;
+using Abp.Domain.Repositories;
+using Abp.Domain.Uow;
 using Abp.MultiTenancy;
 using Abp.Runtime.Security;
 using Abp.UI;
+using Microsoft.EntityFrameworkCore;
 using MySuperStats.Authentication.External;
 using MySuperStats.Authentication.JwtBearer;
 using MySuperStats.Authorization;
@@ -30,6 +33,9 @@ namespace MySuperStats.Controllers
         private readonly IExternalAuthConfiguration _externalAuthConfiguration;
         private readonly IExternalAuthManager _externalAuthManager;
         private readonly UserRegistrationManager _userRegistrationManager;
+        private readonly IRepository<User, long> _userRepository;
+        private readonly IUnitOfWorkManager _unitOfWorkManager;
+        private readonly IRepository<Tenant> _tenantRepository;
 
         public TokenAuthController(
             LogInManager logInManager,
@@ -38,7 +44,8 @@ namespace MySuperStats.Controllers
             TokenAuthConfiguration configuration,
             IExternalAuthConfiguration externalAuthConfiguration,
             IExternalAuthManager externalAuthManager,
-            UserRegistrationManager userRegistrationManager)
+            UserRegistrationManager userRegistrationManager, IRepository<User, long> userRepository,
+            IUnitOfWorkManager unitOfWorkManager, IRepository<Tenant> tenantRepository)
         {
             _logInManager = logInManager;
             _tenantCache = tenantCache;
@@ -47,6 +54,9 @@ namespace MySuperStats.Controllers
             _externalAuthConfiguration = externalAuthConfiguration;
             _externalAuthManager = externalAuthManager;
             _userRegistrationManager = userRegistrationManager;
+            _userRepository = userRepository;
+            _unitOfWorkManager = unitOfWorkManager;
+            _tenantRepository = tenantRepository;
         }
 
         [HttpPost]
@@ -76,56 +86,42 @@ namespace MySuperStats.Controllers
         }
 
         [HttpPost]
-        public async Task<ExternalAuthenticateResultModel> ExternalAuthenticate([FromBody] ExternalAuthenticateModel model)
+        public async Task<ExternalAuthenticateResultModel> ExternalAuthenticate(
+            [FromBody] ExternalAuthenticateModel model)
         {
             var externalUser = await GetExternalUserInfo(model);
 
-            var loginResult = await _logInManager.LoginAsync(new UserLoginInfo(model.AuthProvider, model.ProviderKey, model.AuthProvider), GetTenancyNameOrNull());
+            var loginResult = await _logInManager.LoginAsync(
+                new UserLoginInfo(model.AuthProvider, model.ProviderKey, model.AuthProvider), GetTenancyNameOrNull());
 
             switch (loginResult.Result)
             {
                 case AbpLoginResultType.Success:
+                {
+                    var accessToken = CreateAccessToken(CreateJwtClaims(loginResult.Identity));
+                    return new ExternalAuthenticateResultModel
                     {
-                        var accessToken = CreateAccessToken(CreateJwtClaims(loginResult.Identity));
-                        return new ExternalAuthenticateResultModel
-                        {
-                            AccessToken = accessToken,
-                            EncryptedAccessToken = GetEncryptedAccessToken(accessToken),
-                            ExpireInSeconds = (int)_configuration.Expiration.TotalSeconds
-                        };
-                    }
+                        AccessToken = accessToken,
+                        EncryptedAccessToken = GetEncryptedAccessToken(accessToken),
+                        ExpireInSeconds = (int)_configuration.Expiration.TotalSeconds
+                    };
+                }
                 case AbpLoginResultType.UnknownExternalLogin:
+                {
+                    var newUser = await RegisterExternalUserAsync(externalUser);
+                    if (!newUser.IsActive)
                     {
-                        var newUser = await RegisterExternalUserAsync(externalUser);
-                        if (!newUser.IsActive)
-                        {
-                            return new ExternalAuthenticateResultModel
-                            {
-                                WaitingForActivation = true
-                            };
-                        }
-
-                        // Try to login again with newly registered user!
-                        loginResult = await _logInManager.LoginAsync(new UserLoginInfo(model.AuthProvider, model.ProviderKey, model.AuthProvider), GetTenancyNameOrNull());
-                        if (loginResult.Result != AbpLoginResultType.Success)
-                        {
-                            throw _abpLoginResultTypeHelper.CreateExceptionForFailedLoginAttempt(
-                                loginResult.Result,
-                                model.ProviderKey,
-                                GetTenancyNameOrNull()
-                            );
-                        }
-
-                        var accessToken = CreateAccessToken(CreateJwtClaims(loginResult.Identity));
-                        
                         return new ExternalAuthenticateResultModel
                         {
-                            AccessToken = accessToken,
-                            EncryptedAccessToken = GetEncryptedAccessToken(accessToken),
-                            ExpireInSeconds = (int)_configuration.Expiration.TotalSeconds
+                            WaitingForActivation = true
                         };
                     }
-                default:
+
+                    // Try to login again with newly registered user!
+                    loginResult = await _logInManager.LoginAsync(
+                        new UserLoginInfo(model.AuthProvider, model.ProviderKey, model.AuthProvider),
+                        GetTenancyNameOrNull());
+                    if (loginResult.Result != AbpLoginResultType.Success)
                     {
                         throw _abpLoginResultTypeHelper.CreateExceptionForFailedLoginAttempt(
                             loginResult.Result,
@@ -133,6 +129,24 @@ namespace MySuperStats.Controllers
                             GetTenancyNameOrNull()
                         );
                     }
+
+                    var accessToken = CreateAccessToken(CreateJwtClaims(loginResult.Identity));
+
+                    return new ExternalAuthenticateResultModel
+                    {
+                        AccessToken = accessToken,
+                        EncryptedAccessToken = GetEncryptedAccessToken(accessToken),
+                        ExpireInSeconds = (int)_configuration.Expiration.TotalSeconds
+                    };
+                }
+                default:
+                {
+                    throw _abpLoginResultTypeHelper.CreateExceptionForFailedLoginAttempt(
+                        loginResult.Result,
+                        model.ProviderKey,
+                        GetTenancyNameOrNull()
+                    );
+                }
             }
         }
 
@@ -183,8 +197,25 @@ namespace MySuperStats.Controllers
             return _tenantCache.GetOrNull(AbpSession.TenantId.Value)?.TenancyName;
         }
 
-        private async Task<AbpLoginResult<Tenant, User>> GetLoginResultAsync(string usernameOrEmailAddress, string password, string tenancyName)
+        private async Task<AbpLoginResult<Tenant, User>> GetLoginResultAsync(string usernameOrEmailAddress,
+            string password, string tenancyName)
         {
+            using (_unitOfWorkManager.Current.DisableFilter(AbpDataFilters.MayHaveTenant,
+                AbpDataFilters.MustHaveTenant))
+            {
+                //Check username or email
+
+                var user = await _userRepository.GetAll()
+                    .Where(p => p.UserName == usernameOrEmailAddress || p.EmailAddress == usernameOrEmailAddress)
+                    .SingleOrDefaultAsync();
+
+                if (user != null)
+                {
+                    var tenant = await _tenantRepository.GetAsync(user.TenantId.GetValueOrDefault());
+                    tenancyName = tenant.TenancyName;                    
+                }
+            }
+
             var loginResult = await _logInManager.LoginAsync(usernameOrEmailAddress, password, tenancyName);
 
             switch (loginResult.Result)
@@ -192,7 +223,8 @@ namespace MySuperStats.Controllers
                 case AbpLoginResultType.Success:
                     return loginResult;
                 default:
-                    throw _abpLoginResultTypeHelper.CreateExceptionForFailedLoginAttempt(loginResult.Result, usernameOrEmailAddress, tenancyName);
+                    throw _abpLoginResultTypeHelper.CreateExceptionForFailedLoginAttempt(loginResult.Result,
+                        usernameOrEmailAddress, tenancyName);
             }
         }
 
@@ -222,7 +254,8 @@ namespace MySuperStats.Controllers
             {
                 new Claim(JwtRegisteredClaimNames.Sub, nameIdClaim.Value),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.Now.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
+                new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.Now.ToUnixTimeSeconds().ToString(),
+                    ClaimValueTypes.Integer64)
             });
 
             return claims;
