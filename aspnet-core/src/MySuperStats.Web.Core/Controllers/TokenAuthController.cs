@@ -209,7 +209,7 @@ namespace MySuperStats.Controllers
                     .Where(p => p.UserName == usernameOrEmailAddress || p.EmailAddress == usernameOrEmailAddress)
                     .SingleOrDefaultAsync();
 
-                if (user != null)
+                if (user?.TenantId != null)
                 {
                     var tenant = await _tenantRepository.GetAsync(user.TenantId.GetValueOrDefault());
                     tenancyName = tenant.TenancyName;                    

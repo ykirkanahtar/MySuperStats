@@ -7,7 +7,7 @@ namespace MySuperStats.Authorization.Users
 {
     public class User : AbpUser<User>
     {
-        public const string DefaultPassword = "123qwe";
+        public const string DefaultPassword = "Tektonik.1234";
 
         public static string CreateRandomPassword()
         {
@@ -19,9 +19,9 @@ namespace MySuperStats.Authorization.Users
             var user = new User
             {
                 TenantId = tenantId,
-                UserName = AdminUserName,
-                Name = AdminUserName,
-                Surname = AdminUserName,
+                UserName = "tenantadmin",
+                Name = "tenantadmin",
+                Surname = "tenantadmin",
                 EmailAddress = emailAddress,
                 Roles = new List<UserRole>()
             };

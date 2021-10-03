@@ -81,7 +81,7 @@ namespace MySuperStats.EntityFrameworkCore.Seed.Host
                     IsActive = true
                 };
 
-                user.Password = new PasswordHasher<User>(new OptionsWrapper<PasswordHasherOptions>(new PasswordHasherOptions())).HashPassword(user, "123qwe");
+                user.Password = new PasswordHasher<User>(new OptionsWrapper<PasswordHasherOptions>(new PasswordHasherOptions())).HashPassword(user, "Tektonik.1234");
                 user.SetNormalizedNames();
 
                 adminUserForHost = _context.Users.Add(user).Entity;

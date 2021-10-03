@@ -74,7 +74,7 @@ namespace MySuperStats.MultiTenancy
                 await CurrentUnitOfWork.SaveChangesAsync(); // To get static role ids
 
                 // Grant all permissions to admin role
-                var adminRole = _roleManager.Roles.Single(r => r.Name == StaticRoleNames.Tenants.Admin);
+                var adminRole = _roleManager.Roles.Single(r => r.Name == StaticRoleNames.Tenants.TenantAdmin);
                 await _roleManager.GrantAllPermissionsAsync(adminRole);
 
                 // Create admin user for the tenant

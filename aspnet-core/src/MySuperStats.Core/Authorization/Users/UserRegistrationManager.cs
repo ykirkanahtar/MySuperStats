@@ -37,7 +37,8 @@ namespace MySuperStats.Authorization.Users
             AbpSession = NullAbpSession.Instance;
         }
 
-        public async Task<User> RegisterAsync(string name, string surname, string emailAddress, string userName, string plainPassword, bool isEmailConfirmed)
+        public async Task<User> RegisterAsync(string name, string surname, string emailAddress, string userName,
+            string plainPassword, bool isEmailConfirmed)
         {
             CheckForTenant();
 
@@ -56,8 +57,12 @@ namespace MySuperStats.Authorization.Users
             };
 
             user.SetNormalizedNames();
-           
-            foreach (var defaultRole in await _roleManager.Roles.Where(r => r.IsDefault).ToListAsync())
+
+            var defaultRoles = await _roleManager.Roles
+                .Where(r => r.Name == StaticRoleNames.Tenants.Player)
+                .ToListAsync();
+
+            foreach (var defaultRole in defaultRoles)
             {
                 user.Roles.Add(new UserRole(tenant.Id, user.Id, defaultRole.Id));
             }

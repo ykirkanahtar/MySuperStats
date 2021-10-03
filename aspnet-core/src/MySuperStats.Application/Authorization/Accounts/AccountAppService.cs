@@ -60,25 +60,28 @@ namespace MySuperStats.Authorization.Accounts
                 }
             }
 
-            AbpSession.Use(1, null);
-            
-            var user = await _userRegistrationManager.RegisterAsync(
-                input.Name,
-                input.Surname,
-                input.EmailAddress,
-                input.UserName,
-                input.Password,
-                true // Assumed email address is always confirmed. Change this if you want to implement email confirmation.
-            );
-
-            var isEmailConfirmationRequiredForLogin =
-                await SettingManager.GetSettingValueAsync<bool>(AbpZeroSettingNames.UserManagement
-                    .IsEmailConfirmationRequiredForLogin);
-
-            return new RegisterOutput
+            using (_unitOfWorkManager.Current.SetTenantId(1))
             {
-                CanLogin = user.IsActive && (user.IsEmailConfirmed || !isEmailConfirmationRequiredForLogin)
-            };
+                AbpSession.Use(1, null);
+            
+                var user = await _userRegistrationManager.RegisterAsync(
+                    input.Name,
+                    input.Surname,
+                    input.EmailAddress,
+                    input.UserName,
+                    input.Password,
+                    true // Assumed email address is always confirmed. Change this if you want to implement email confirmation.
+                );
+
+                var isEmailConfirmationRequiredForLogin =
+                    await SettingManager.GetSettingValueAsync<bool>(AbpZeroSettingNames.UserManagement
+                        .IsEmailConfirmationRequiredForLogin);
+
+                return new RegisterOutput
+                {
+                    CanLogin = user.IsActive && (user.IsEmailConfirmed || !isEmailConfirmationRequiredForLogin)
+                };                
+            }
         }
     }
 }

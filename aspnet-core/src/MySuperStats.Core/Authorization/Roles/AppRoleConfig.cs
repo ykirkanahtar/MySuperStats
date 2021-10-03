@@ -20,7 +20,28 @@ namespace MySuperStats.Authorization.Roles
 
             roleManagementConfig.StaticRoles.Add(
                 new StaticRoleDefinition(
-                    StaticRoleNames.Tenants.Admin,
+                    StaticRoleNames.Tenants.TenantAdmin,
+                    MultiTenancySides.Tenant
+                )
+            );
+            
+            roleManagementConfig.StaticRoles.Add(
+                new StaticRoleDefinition(
+                    StaticRoleNames.Tenants.TenantOwner,
+                    MultiTenancySides.Tenant
+                )
+            );
+            
+            roleManagementConfig.StaticRoles.Add(
+                new StaticRoleDefinition(
+                    StaticRoleNames.Tenants.Editor,
+                    MultiTenancySides.Tenant
+                )
+            );
+            
+            roleManagementConfig.StaticRoles.Add(
+                new StaticRoleDefinition(
+                    StaticRoleNames.Tenants.Player,
                     MultiTenancySides.Tenant
                 )
             );
