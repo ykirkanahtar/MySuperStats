@@ -1,14 +1,17 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Abp.Application.Services;
 using Abp.Application.Services.Dto;
 using Abp.Authorization;
 using Abp.Domain.Repositories;
+using Abp.Domain.Uow;
 using Abp.Extensions;
 using Abp.IdentityFramework;
 using Abp.Linq.Extensions;
 using Abp.MultiTenancy;
 using Abp.Runtime.Security;
+using Abp.Runtime.Session;
 using MySuperStats.Authorization;
 using MySuperStats.Authorization.Roles;
 using MySuperStats.Authorization.Users;
@@ -26,6 +29,7 @@ namespace MySuperStats.MultiTenancy
         private readonly UserManager _userManager;
         private readonly RoleManager _roleManager;
         private readonly IAbpZeroDbMigrator _abpZeroDbMigrator;
+        private readonly PermissionManager _permissionManager;
 
         public TenantAppService(
             IRepository<Tenant, int> repository,
@@ -33,7 +37,7 @@ namespace MySuperStats.MultiTenancy
             EditionManager editionManager,
             UserManager userManager,
             RoleManager roleManager,
-            IAbpZeroDbMigrator abpZeroDbMigrator)
+            IAbpZeroDbMigrator abpZeroDbMigrator, PermissionManager permissionManager)
             : base(repository)
         {
             _tenantManager = tenantManager;
@@ -41,6 +45,7 @@ namespace MySuperStats.MultiTenancy
             _userManager = userManager;
             _roleManager = roleManager;
             _abpZeroDbMigrator = abpZeroDbMigrator;
+            _permissionManager = permissionManager;
         }
 
         public override async Task<TenantDto> CreateAsync(CreateTenantDto input)
@@ -49,9 +54,10 @@ namespace MySuperStats.MultiTenancy
 
             // Create tenant
             var tenant = ObjectMapper.Map<Tenant>(input);
-            tenant.ConnectionString = input.ConnectionString.IsNullOrEmpty()
-                ? null
-                : SimpleStringCipher.Instance.Encrypt(input.ConnectionString);
+            
+            tenant.IsActive = true;
+            tenant.Name = tenant.TenancyName;
+            var adminEmailAddress = $"{tenant.TenancyName}.tenant@mysuperstats.com";
 
             var defaultEdition = await _editionManager.FindByNameAsync(EditionManager.DefaultEditionName);
             if (defaultEdition != null)
@@ -64,6 +70,17 @@ namespace MySuperStats.MultiTenancy
 
             // Create tenant database
             _abpZeroDbMigrator.CreateOrMigrateForTenant(tenant);
+
+            User sessionUser;
+            
+            using (CurrentUnitOfWork.DisableFilter(AbpDataFilters.MayHaveTenant,
+                AbpDataFilters.MustHaveTenant))
+            {
+                sessionUser = await _userManager.FindByIdAsync(AbpSession.GetUserId().ToString());
+            }
+
+            sessionUser.TenantId = tenant.Id;
+            await CurrentUnitOfWork.SaveChangesAsync();
 
             // We are working entities of new tenant, so changing tenant filter
             using (CurrentUnitOfWork.SetTenantId(tenant.Id))
@@ -78,7 +95,7 @@ namespace MySuperStats.MultiTenancy
                 await _roleManager.GrantAllPermissionsAsync(adminRole);
 
                 // Create admin user for the tenant
-                var adminUser = User.CreateTenantAdminUser(tenant.Id, input.AdminEmailAddress);
+                var adminUser = User.CreateTenantAdminUser(tenant.Id, adminEmailAddress);
                 await _userManager.InitializeOptionsAsync(tenant.Id);
                 CheckErrors(await _userManager.CreateAsync(adminUser, User.DefaultPassword));
                 await CurrentUnitOfWork.SaveChangesAsync(); // To get admin user's id
@@ -86,9 +103,40 @@ namespace MySuperStats.MultiTenancy
                 // Assign admin user to role!
                 CheckErrors(await _userManager.AddToRoleAsync(adminUser, adminRole.Name));
                 await CurrentUnitOfWork.SaveChangesAsync();
+                
+                //Setting roles
+                await CreateRoleWithPermissions(StaticRoleNames.Tenants.TenantOwner,
+                    StaticRolePermissions.TenantOwnerPermissions);
+                
+                await CreateRoleWithPermissions(StaticRoleNames.Tenants.Editor,
+                    StaticRolePermissions.EditorPermissions);
+                
+                await CreateRoleWithPermissions(StaticRoleNames.Tenants.Player,
+                    StaticRolePermissions.PlayerPermissions);
+                
+                await _userManager.AddToRoleAsync(sessionUser, StaticRoleNames.Tenants.TenantOwner);
             }
 
+            sessionUser.TenantId = 1;
+            await CurrentUnitOfWork.SaveChangesAsync();
+
             return MapToEntityDto(tenant);
+        }
+
+        private async Task CreateRoleWithPermissions(string roleName, List<string> rolePermissions, bool addSessionUserToRole = false)
+        {
+            var role = _roleManager.Roles.Single(r => r.Name == roleName);
+            foreach (var rolePermission in rolePermissions)
+            {
+                var permission = _permissionManager.GetPermission(rolePermission);
+                await _roleManager.GrantPermissionAsync(role, permission);
+            }
+
+            if (addSessionUserToRole)
+            {
+                var sessionUser = await _userManager.FindByIdAsync(AbpSession.GetUserId().ToString());
+                await _userManager.AddToRoleAsync(sessionUser, role.Name);
+            }
         }
 
         protected override IQueryable<Tenant> CreateFilteredQuery(PagedTenantResultRequestDto input)

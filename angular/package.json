@@ -10,7 +10,14 @@
     "lint": "tslint --force --project src/tsconfig.json src/**/*.ts -t verbose",
     "ng": "ng",
     "start": "ng serve --host 0.0.0.0 --port 4400",
-    "test": "ng test"
+    "test": "ng test",
+    "publish-test": "ng build --prod --configuration=test --build-optimizer",
+    "publish-staging": "ng build --prod --configuration=staging --build-optimizer",
+    "publish-prod": "ng build --prod --configuration=production --build-optimizer",
+    "build": "ng build",
+    "postinstall": "ngcc",
+    "refresh.bat": "cd nswag/ && refresh.bat",
+    "refresh.sh": "cd nswag/ && sh refresh.sh"
   },
   "dependencies": {
     "@angular/animations": "^12.0.5",
