@@ -44,6 +44,56 @@ namespace MySuperStats.Tests.Tenants
         }
 
         [Fact]
+        public async Task CreatedTenantHasStaticRoles_Test()
+        {
+            await _accountAppService.Register(GetNewUser());
+
+            LoginAsTenant("Default", UserName);
+
+            await _tenantAppService.CreateAsync(new CreateTenantDto
+            {
+                TenancyName = "Tenant1"
+            });
+
+            await UsingDbContextAsync(async context =>
+            {
+                var tenant = await context.Tenants.FirstOrDefaultAsync(t => t.TenancyName == "Tenant1");
+
+                var roles = await context.Roles.Where(r => r.TenantId == tenant.Id).ToListAsync();
+
+                roles.Count.ShouldBe(4);
+            });
+        }
+
+        [Fact]
+        public async Task CreatedTenantHasOwnerRoleUser_Test()
+        {
+            await _accountAppService.Register(GetNewUser());
+
+            LoginAsTenant("Default", UserName);
+
+            await _tenantAppService.CreateAsync(new CreateTenantDto
+            {
+                TenancyName = "Tenant1"
+            });
+
+            await UsingDbContextAsync(async context =>
+            {
+                var tenant = await context.Tenants.FirstOrDefaultAsync(t => t.TenancyName == "Tenant1");
+
+                var user = await context.Users.FirstOrDefaultAsync(u => u.UserName == UserName);
+
+                var tenantOwnerRole = await context.Roles.FirstOrDefaultAsync(r =>
+                    r.Name == StaticRoleNames.Tenants.TenantOwner && r.TenantId == tenant.Id);
+
+                var userRole = await context.UserRoles.FirstOrDefaultAsync(p =>
+                    p.UserId == user.Id && p.RoleId == tenantOwnerRole.Id && p.TenantId == tenant.Id);
+
+                userRole.ShouldNotBeNull();
+            });
+        }
+
+        [Fact]
         public async Task GetUserTenants_Test()
         {
             //Arrange
@@ -63,16 +113,9 @@ namespace MySuperStats.Tests.Tenants
                 TenancyName = userNotInTenantName
             });
 
-            await _accountAppService.Register(new RegisterInput
-            {
-                Name = "John",
-                Surname = "Nash",
-                UserName = "john.nash",
-                EmailAddress = "john@volosoft.com",
-                Password = "123qwe",
-            });
+            await _accountAppService.Register(GetNewUser());
 
-            LoginAsTenant("Default", "john.nash");
+            LoginAsTenant("Default", UserName);
 
 
             await _tenantAppService.CreateAsync(new CreateTenantDto
@@ -91,18 +134,18 @@ namespace MySuperStats.Tests.Tenants
 
                 var user = await context.Users.FirstOrDefaultAsync(u => u.UserName == "john.nash");
 
-                var ownerRole =
-                    await context.Roles.FirstOrDefaultAsync(r =>
-                        r.DisplayName == StaticRoleNames.Tenants.TenantOwner && r.TenantId == userOwnerTenant.Id);
+                // ownerRole
+                await context.Roles.FirstOrDefaultAsync(r =>
+                    r.DisplayName == StaticRoleNames.Tenants.TenantOwner && r.TenantId == userOwnerTenant.Id);
 
                 var playerRole =
                     await context.Roles.FirstOrDefaultAsync(r =>
                         r.DisplayName == StaticRoleNames.Tenants.Player && r.TenantId == userPlayerTenant.Id);
+
                 // playerTenantRole
-                
                 await context.UserRoles.AddAsync(new UserRole(userPlayerTenant.Id, user.Id, playerRole.Id));
                 await context.SaveChangesAsync();
-                
+
                 var userTenants = await _tenantAppService.GetAllForSessionUserAsync();
 
                 var userTenantsIds = userTenants.Items.Select(p => p.Id).ToList();

@@ -9,6 +9,7 @@ using Abp.Events.Bus.Entities;
 using Abp.MultiTenancy;
 using Abp.Runtime.Session;
 using Abp.TestBase;
+using MySuperStats.Authorization.Accounts.Dto;
 using MySuperStats.Authorization.Users;
 using MySuperStats.EntityFrameworkCore;
 using MySuperStats.EntityFrameworkCore.Seed.Host;
@@ -47,6 +48,8 @@ namespace MySuperStats.Tests
 
             LoginAsDefaultTenantAdmin();
         }
+
+        protected readonly string UserName = "john.nash";
 
         #region UsingDbContext
 
@@ -210,6 +213,18 @@ namespace MySuperStats.Tests
         {
             var tenantId = AbpSession.GetTenantId();
             return await UsingDbContext(context => context.Tenants.SingleAsync(t => t.Id == tenantId));
+        }
+        
+        protected RegisterInput GetNewUser()
+        {
+            return new RegisterInput
+            {
+                Name = "John",
+                Surname = "Nash",
+                UserName = UserName,
+                EmailAddress = "john@volosoft.com",
+                Password = "123qwe",
+            };
         }
     }
 }
