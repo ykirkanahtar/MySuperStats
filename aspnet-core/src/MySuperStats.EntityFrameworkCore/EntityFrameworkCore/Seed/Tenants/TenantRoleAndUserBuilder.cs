@@ -73,12 +73,13 @@ namespace MySuperStats.EntityFrameworkCore.Seed.Tenants
             }
 
             // Admin user
+            var tenant = _context.Tenants.IgnoreQueryFilters().FirstOrDefault(t => t.Id == _tenantId);
 
             var adminUser = _context.Users.IgnoreQueryFilters()
-                .FirstOrDefault(u => u.TenantId == _tenantId && u.UserName == "tenantadmin");
+                .FirstOrDefault(u => u.TenantId == _tenantId && u.UserName == $"{tenant.TenancyName}_{AbpUserBase.AdminUserName}");
             if (adminUser == null)
             {
-                adminUser = User.CreateTenantAdminUser(_tenantId, "tenantadmin@defaulttenant.com");
+                adminUser = User.CreateTenantAdminUser(_tenantId, tenant.TenancyName, "tenantadmin@defaulttenant.com");
                 adminUser.Password =
                     new PasswordHasher<User>(new OptionsWrapper<PasswordHasherOptions>(new PasswordHasherOptions()))
                         .HashPassword(adminUser, "Tektonik.1234");

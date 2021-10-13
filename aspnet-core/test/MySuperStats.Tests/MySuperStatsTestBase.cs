@@ -144,7 +144,7 @@ namespace MySuperStats.Tests
 
         protected void LoginAsDefaultTenantAdmin()
         {
-            LoginAsTenant(AbpTenantBase.DefaultTenantName, AbpUserBase.AdminUserName);
+            LoginAsTenant(AbpTenantBase.DefaultTenantName, $"Default_tenantadmin");
         }
 
         protected void LoginAsHost(string userName)
@@ -173,6 +173,11 @@ namespace MySuperStats.Tests
 
             AbpSession.TenantId = tenant.Id;
 
+            var allUsers =
+                UsingDbContext(
+                    context =>
+                        context.Users.FirstOrDefault(u => u.TenantId == AbpSession.TenantId));
+            
             var user =
                 UsingDbContext(
                     context =>

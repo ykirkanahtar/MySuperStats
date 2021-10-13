@@ -53,6 +53,7 @@ namespace MySuperStats.Users
             _logInManager = logInManager;
         }
 
+        [Obsolete("Use register method in account app service")]
         public override async Task<UserDto> CreateAsync(CreateUserDto input)
         {
             CheckCreatePermission();

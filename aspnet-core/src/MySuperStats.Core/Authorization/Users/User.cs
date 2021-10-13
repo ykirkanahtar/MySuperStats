@@ -14,12 +14,12 @@ namespace MySuperStats.Authorization.Users
             return Guid.NewGuid().ToString("N").Truncate(16);
         }
 
-        public static User CreateTenantAdminUser(int tenantId, string emailAddress)
+        public static User CreateTenantAdminUser(int tenantId, string tenantName, string emailAddress)
         {
             var user = new User
             {
                 TenantId = tenantId,
-                UserName = "tenantadmin",
+                UserName = $"{tenantName}_tenantadmin",
                 Name = "tenantadmin",
                 Surname = "tenantadmin",
                 EmailAddress = emailAddress,
