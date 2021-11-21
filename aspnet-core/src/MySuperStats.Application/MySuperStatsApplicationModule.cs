@@ -1,4 +1,5 @@
 ﻿using Abp.AutoMapper;
+using Abp.MailKit;
 using Abp.Modules;
 using Abp.Reflection.Extensions;
 using MySuperStats.Authorization;
@@ -7,7 +8,8 @@ namespace MySuperStats
 {
     [DependsOn(
         typeof(MySuperStatsCoreModule), 
-        typeof(AbpAutoMapperModule))]
+        typeof(AbpAutoMapperModule),
+        typeof(AbpMailKitModule))]
     public class MySuperStatsApplicationModule : AbpModule
     {
         public override void PreInitialize()
