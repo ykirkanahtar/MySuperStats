@@ -1,12 +1,20 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Abp.Auditing;
+using Abp.Domain.Uow;
 using MySuperStats.Sessions.Dto;
 
 namespace MySuperStats.Sessions
 {
     public class SessionAppService : MySuperStatsAppServiceBase, ISessionAppService
     {
+        private readonly IUnitOfWorkManager _unitOfWorkManager;
+
+        public SessionAppService(IUnitOfWorkManager unitOfWorkManager)
+        {
+            _unitOfWorkManager = unitOfWorkManager;
+        }
+
         [DisableAuditing]
         public async Task<GetCurrentLoginInformationsOutput> GetCurrentLoginInformations()
         {
@@ -20,14 +28,24 @@ namespace MySuperStats.Sessions
                 }
             };
 
-            if (AbpSession.TenantId.HasValue)
+            int? userTenantId = null;
+            using (_unitOfWorkManager.Current.DisableFilter(AbpDataFilters.MayHaveTenant,
+                AbpDataFilters.MustHaveTenant))
             {
-                output.Tenant = ObjectMapper.Map<TenantLoginInfoDto>(await GetCurrentTenantAsync());
+                if (AbpSession.UserId.HasValue)
+                {
+                    output.User = ObjectMapper.Map<UserLoginInfoDto>(await GetCurrentUserAsync());
+                    userTenantId = output.User.TenantId > 0 ? output.User.TenantId : null;
+                    AbpSession.Use(userTenantId, output.User.Id);
+                }
             }
 
-            if (AbpSession.UserId.HasValue)
+            if (AbpSession.TenantId.HasValue)
             {
-                output.User = ObjectMapper.Map<UserLoginInfoDto>(await GetCurrentUserAsync());
+                using (_unitOfWorkManager.Current.SetTenantId(userTenantId))
+                {
+                    output.Tenant = ObjectMapper.Map<TenantLoginInfoDto>(await GetCurrentTenantAsync());
+                }
             }
 
             return output;

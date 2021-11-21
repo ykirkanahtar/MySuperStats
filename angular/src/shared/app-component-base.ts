@@ -11,7 +11,8 @@ import {
 } from 'abp-ng2-module';
 
 import { AppSessionService } from '@shared/session/app-session.service';
-
+import { PrimengTableHelper } from 'shared/helpers/PrimengTableHelper';
+import { PermissionHelper } from 'shared/helpers/PermissionHelper';
 export abstract class AppComponentBase {
 
     localizationSourceName = AppConsts.localization.defaultLocalizationSourceName;
@@ -25,6 +26,8 @@ export abstract class AppComponentBase {
     multiTenancy: AbpMultiTenancyService;
     appSession: AppSessionService;
     elementRef: ElementRef;
+    primengTableHelper: PrimengTableHelper;
+    permissionHelper: PermissionHelper;
 
     constructor(injector: Injector) {
         this.localization = injector.get(LocalizationService);
@@ -36,6 +39,8 @@ export abstract class AppComponentBase {
         this.multiTenancy = injector.get(AbpMultiTenancyService);
         this.appSession = injector.get(AppSessionService);
         this.elementRef = injector.get(ElementRef);
+        this.primengTableHelper = new PrimengTableHelper();
+        this.permissionHelper = injector.get(PermissionHelper);
     }
 
     l(key: string, ...args: any[]): string {

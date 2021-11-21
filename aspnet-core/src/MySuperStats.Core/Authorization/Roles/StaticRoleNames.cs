@@ -25,6 +25,7 @@ namespace MySuperStats.Authorization.Roles
             TenantOwnerPermissions = new List<string>
             {
                 PermissionNames.Pages_Tenants,
+                PermissionNames.Pages_Tenants_Edit,
                 PermissionNames.Pages_Tenants_SetPassive,
 
                 PermissionNames.Pages_Matches_Create,

@@ -31,6 +31,7 @@ namespace MySuperStats.Authorization
             context.CreatePermission(PermissionNames.Pages_Stats_Delete, L("DeleteStats"));
             
             context.CreatePermission(PermissionNames.Pages_Players_AssignToUser, L("AssignPlayerToUser"));
+            context.CreatePermission(PermissionNames.Pages_Tenants_Edit, L("EditTenant"));
             context.CreatePermission(PermissionNames.Pages_Tenants_SetPassive, L("SetTenantsPassive"));
         }
 

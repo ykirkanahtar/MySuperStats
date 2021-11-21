@@ -146,10 +146,14 @@ namespace MySuperStats.Tests.Tenants
                 await context.UserRoles.AddAsync(new UserRole(userPlayerTenant.Id, user.Id, playerRole.Id));
                 await context.SaveChangesAsync();
 
-                var userTenants = await _tenantAppService.GetAllForSessionUserAsync();
+                var userTenants = await _tenantAppService.GetAllForSessionUserAsync(new PagedTenantResultRequestDto
+                {
+                    SkipCount = 0,
+                    MaxResultCount = 10,
+                });
 
                 var userTenantsIds = userTenants.Items.Select(p => p.Id).ToList();
-                var expectedTenantIds = new List<int> { userOwnerTenant.Id, userPlayerTenant.Id };
+                var expectedTenantIds = new List<long> { userOwnerTenant.Id, userPlayerTenant.Id };
                 expectedTenantIds.ShouldBeSubsetOf(userTenantsIds);
             });
         }
