@@ -1,0 +1,19 @@
+/*
+===============================
+Action Menu Items
+===============================
+*/
+.dropdown-item {
+  display: flex;
+}
+.dropdown-text {
+  margin: 0.5em;
+}
+.dropdown-item i {
+  width: 15%;
+  display: flex;
+  align-items: left;
+  margin-top: 0.3em;
+  margin-right: 0.8em;
+  color: var(--secondary);
+}

@@ -272,7 +272,7 @@ namespace MySuperStats.MultiTenancy
             }
         }
 
-        public async Task RemoveOwnUserFromTenant(int tenantId)
+        public async Task LeaveTenant(int tenantId)
         {
             await RemoveUserFromTenant(tenantId, AbpSession.GetUserId());
         }

@@ -148,7 +148,7 @@
                     {{ "TenancyName" | localize }}
                   </th>
                   <th pSortableColumn="RoleName" [title]="l('Role')">
-                    {{ "Role" | localize }}
+                    {{ "Roles" | localize }}
                   </th>
                 </tr>
               </thead>
@@ -176,7 +176,7 @@
                         <div class="dropdown-menu" *dropdownMenu>
                           <a href="javascript:;" class="dropdown-item"
                               (click)="loginTenant(tenant)">
-                              <i class="fas fa-sign-in-alt"></i>{{l('Login')}}
+                              <i class="fas fa-sign-in-alt"></i>{{l('LogIn')}}
                           </a>
                           <a href="javascript:;" class="dropdown-item"
                               *ngIf="tenant.permissionNames.includes('Pages.Tenants.Edit')"
@@ -190,8 +190,8 @@
                           </a>
                           <a href="javascript:;" class="dropdown-item"
                             *ngIf="tenant.permissionNames.includes('Pages.Tenants.Edit') === false"
-                            (click)="removeTenant(tenant)">
-                            <i class="fas fa-user-minus"></i>{{l('RemoveTenant')}}
+                            (click)="leaveTenant(tenant)">
+                            <i class="fas fa-user-minus"></i>{{l('Leave')}}
                         </a>
                         </div>
                       </div>

@@ -118,7 +118,7 @@
     <text name="ResetPasswordStepTwoInfo">2. Bu şifreyi kaydettikten sonra ilgili kullanıcıya gönderin</text>
     <text name="UsersActivation">Kullanıcıları aktifleştirme</text>
 
-    <!--Roles-->
+    <!--Permissions-->
     <text name="CreateMatch">Maç oluşturma</text>
     <text name="UpdateMatch">Maç güncelleme</text>
     <text name="DeleteMatch">Maç silme </text>
@@ -137,8 +137,15 @@
 
     <text name="AssignPlayerToUser">Oyuncuya kullanıcı atama</text>
     <text name="SetTenantsPassive">Maç grubunu silme</text>
+    <!--Permissions-->
+
+    <!--Roles-->
+    <text name="TenantOwner">Maç grubu yöneticisi</text>
+    <text name="Editor">Editör</text>
+    <text name="Player">Oyuncu</text>
     <!--Roles-->
 
+    <text name="Leave">Ayrıl</text>
     <text name="TenantDeleteWarning">{0} maç grubunu silmek istediğinize emin misiniz ?</text>
     <text name="TenantRemoveWarning">{0} maç grubundan ayrılmak istediğinize emin misiniz ?</text>
 

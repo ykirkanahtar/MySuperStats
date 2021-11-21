@@ -9,7 +9,7 @@ namespace MySuperStats.MultiTenancy
     {
         Task<PagedResultDto<TenantWithUserPermissionsDto>> GetAllForSessionUserAsync(PagedTenantResultRequestDto input);
         Task LoginToTenant(int tenantId);
-        Task RemoveOwnUserFromTenant(int tenantId);
+        Task LeaveTenant(int tenantId);
         Task RemoveUserFromTenant(int tenantId, long userId);
     }
 }

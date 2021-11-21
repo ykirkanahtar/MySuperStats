@@ -966,8 +966,8 @@ export class TenantServiceProxy {
      * @param tenantId (optional) 
      * @return Success
      */
-    removeOwnUserFromTenant(tenantId: number | undefined): Observable<void> {
-        let url_ = this.baseUrl + "/api/services/app/Tenant/RemoveOwnUserFromTenant?";
+    leaveTenant(tenantId: number | undefined): Observable<void> {
+        let url_ = this.baseUrl + "/api/services/app/Tenant/LeaveTenant?";
         if (tenantId === null)
             throw new Error("The parameter 'tenantId' cannot be null.");
         else if (tenantId !== undefined)
@@ -981,12 +981,12 @@ export class TenantServiceProxy {
             })
         };
 
-        return this.http.request("delete", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processRemoveOwnUserFromTenant(response_);
+        return this.http.request("post", url_, options_).pipe(_observableMergeMap((response_ : any) => {
+            return this.processLeaveTenant(response_);
         })).pipe(_observableCatch((response_: any) => {
             if (response_ instanceof HttpResponseBase) {
                 try {
-                    return this.processRemoveOwnUserFromTenant(<any>response_);
+                    return this.processLeaveTenant(<any>response_);
                 } catch (e) {
                     return <Observable<void>><any>_observableThrow(e);
                 }
@@ -995,7 +995,7 @@ export class TenantServiceProxy {
         }));
     }
 
-    protected processRemoveOwnUserFromTenant(response: HttpResponseBase): Observable<void> {
+    protected processLeaveTenant(response: HttpResponseBase): Observable<void> {
         const status = response.status;
         const responseBlob =
             response instanceof HttpResponse ? response.body :

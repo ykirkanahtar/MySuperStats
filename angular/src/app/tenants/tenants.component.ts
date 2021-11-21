@@ -105,14 +105,14 @@ export class TenantsComponent extends PagedListingComponentBase<TenantDto> {
     );
   }
 
-  removeTenant(tenant: TenantDto): void {
+  leaveTenant(tenant: TenantDto): void {
     abp.message.confirm(
       this.l("TenantRemoveWarning", tenant.name),
       undefined,
       (result: boolean) => {
         if (result) {
           this._tenantService
-            .removeOwnUserFromTenant(tenant.id)
+            .leaveTenant(tenant.id)
             .pipe(
               finalize(() => {
                 window.location.reload();
